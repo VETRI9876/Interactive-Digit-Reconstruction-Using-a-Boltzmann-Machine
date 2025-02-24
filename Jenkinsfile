@@ -23,9 +23,12 @@ pipeline {
         stage('Push to Azure Container Registry') {
             steps {
                 withCredentials([string(credentialsId: 'AZURE_CREDENTIALS', variable: 'AZURE_CREDENTIALS')]) {
-                    sh "az login --service-principal -u <client-id> -p <client-secret> --tenant <tenant-id>"
+                    sh "az login"
                     sh "az acr login --name vetri"
+                    sh "docker build -t $ACR_NAME/$IMAGE_NAME:$TAG ."
                     sh "docker push $ACR_NAME/$IMAGE_NAME:$TAG"
+                    sh "az acr repository list --name vetri --output table"
+                    sh "az acr repository show-tags --name vetri --repository fastapi-app --output table"
                 }
             }
         }
