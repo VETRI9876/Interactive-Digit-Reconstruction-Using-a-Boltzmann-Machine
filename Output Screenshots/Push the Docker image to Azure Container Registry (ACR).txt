@@ -1,0 +1,27 @@
+#Push the Docker image to Azure Container Registry (ACR) and verify that it's stored there
+
+Step 1: Login to Azure
+Ensure you are logged into your Azure account.
+
+az login
+
+Step 2: Login to ACR
+Run the following command to authenticate:
+
+az acr login --name vetri
+
+Step 3: Build the Docker Image
+Run this command in the directory where your Dockerfile is located:
+
+docker build -t vetri.azurecr.io/fastapi-app:latest .
+
+Step 4: Push Image to ACR
+docker push vetri.azurecr.io/fastapi-app:latest
+
+Step 5: Verify Image in ACR
+Check if the image is pushed successfully:
+
+az acr repository list --name vetri --output table
+
+Step 6: Check Available Tags
+az acr repository show-tags --name vetri --repository fastapi-app --output table

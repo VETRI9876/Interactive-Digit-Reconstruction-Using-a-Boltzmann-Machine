@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digit Reconstruction Results</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Reconstructed Digit</h1>
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% else %}
+      <div class="images">
+        <div>
+          <h2>Original Image:</h2>
+          <img src="data:image/png;base64,{{ original_image_base64 }}" alt="Original Image">
+        </div>
+        <div>
+          <h2>Reconstructed Image:</h2>
+          <img src="data:image/png;base64,{{ reconstructed_image_base64 }}" alt="Reconstructed Image">
+        </div>
+      </div>
+      <a href="/" class="button">Upload Another Image</a>
+    {% endif %}
+  </div>
+</body>
+</html>

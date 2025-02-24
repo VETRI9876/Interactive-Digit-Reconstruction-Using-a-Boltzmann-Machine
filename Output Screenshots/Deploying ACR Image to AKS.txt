@@ -1,0 +1,38 @@
+#Step 1: Set Up AKS Cluster
+Create AKS Cluster in Azure Portal
+
+#Step 2: Connect AKS to ACR
+az aks update --resource-group myResourceGroup --name devops-aks-cluster --attach-acr vetri
+
+#Step 3: Get Kubernetes Credentials
+Download the Kubeconfig file to interact with your cluster:
+az aks get-credentials --resource-group myResourceGroup --name myAKSCluster
+
+Verify connection:
+kubectl get nodes
+You should see a list of worker nodes.
+
+#Step 4: Deploy the FastAPI Application
+Create a Kubernetes Deployment YAML file (deployment.yaml)
+
+#Step 5: Create a Kubernetes Service (Expose the API)
+Create a service.yaml file:
+
+Step 6: Apply Kubernetes Configuration
+Apply the Deployment:
+kubectl apply -f deployment.yaml
+
+Apply the Service:
+kubectl apply -f service.yaml
+
+#Step 7: Check Pod & Service Status
+kubectl get pods
+kubectl get deployments
+kubectl get services
+
+#Step 8: Get the External IP
+Check if the LoadBalancer has assigned an external IP:
+kubectl get svc fastapi-service
+
+Look for the EXTERNAL-IP column. Once assigned, you can access your FastAPI app at:
+http://<EXTERNAL-IP>
