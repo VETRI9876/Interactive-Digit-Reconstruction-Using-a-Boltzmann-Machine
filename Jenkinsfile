@@ -5,7 +5,7 @@ pipeline {
         IMAGE_NAME = "fastapi-app"
         TAG = "latest"
         RESOURCE_GROUP = "myResourceGroup"
-        AKS_CLUSTER = "myAKSCluster"
+        AKS_CLUSTER = "devops-aks-cluster"
     }
     stages {
         stage('Checkout Code') {
