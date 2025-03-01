@@ -20,10 +20,19 @@ pipeline {
             }
         }
 
-        stage('Push to Azure Container Registry') {
+        stage('Create Azure Container Registry') {
             steps {
                 withCredentials([string(credentialsId: 'AZURE_CREDENTIALS', variable: 'AZURE_CREDENTIALS')]) {
                     sh "az login"
+                    sh "az acr create --resource-group $RESOURCE_GROUP --name vetri --sku Basic"
+                    sh "az acr show --name vetri --output table"
+                }
+            }
+        }
+
+        stage('Push to Azure Container Registry') {
+            steps {
+                withCredentials([string(credentialsId: 'AZURE_CREDENTIALS', variable: 'AZURE_CREDENTIALS')]) {
                     sh "az acr login --name vetri"
                     sh "docker build -t $ACR_NAME/$IMAGE_NAME:$TAG ."
                     sh "docker push $ACR_NAME/$IMAGE_NAME:$TAG"
