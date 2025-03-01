@@ -13,38 +13,22 @@ pipeline {
     stages {
         stage('Install Dependencies') {
             steps {
-                sh '''
-                # Install Docker if not installed
-                if ! command -v docker &> /dev/null; then
-                    echo "Installing Docker..."
-                    sudo apt update
-                    sudo apt install -y docker.io
-                    sudo systemctl start docker
-                    sudo systemctl enable docker
-                    sudo usermod -aG docker jenkins
-                else
-                    echo "Docker is already installed."
-                fi
-
-                # Install Azure CLI if not installed
-                if ! command -v az &> /dev/null; then
-                    echo "Installing Azure CLI..."
-                    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-                else
-                    echo "Azure CLI is already installed."
-                fi
-                '''
+                script {
+                    sh """
+                        echo 'Installing Docker...'
+                        sudo apt update
+                        command -v docker || (echo 'yourpassword' | sudo -S apt install -y docker.io)
+                        sudo systemctl start docker
+                        sudo systemctl enable docker
+                    """
+                }
             }
         }
 
         stage('Checkout Code') {
             steps {
                 script {
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: '*/main']],
-                        userRemoteConfigs: [[url: 'https://github.com/VETRI9876/Interactive-Digit-Reconstruction-Using-a-Boltzmann-Machine.git']]
-                    ])
+                    checkout scm
                 }
             }
         }
@@ -57,53 +41,54 @@ pipeline {
 
         stage('Azure Login') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'AZURE_CREDENTIALS', usernameVariable: 'AZURE_USER', passwordVariable: 'AZURE_PASS')]) {
-                    sh "az login --service-principal -u $AZURE_USER -p $AZURE_PASS --tenant <your-tenant-id>"
+                withCredentials([string(credentialsId: 'AZURE_CREDENTIALS', variable: 'AZURE_CREDENTIALS')]) {
+                    sh "echo $AZURE_CREDENTIALS | az login --service-principal --username <appId> --password <password> --tenant <tenantId>"
                 }
             }
         }
 
         stage('Create Resource Group & ACR (if not exists)') {
             steps {
-                sh '''
-                if ! az group show --name $RESOURCE_GROUP &>/dev/null; then
-                    az group create --name $RESOURCE_GROUP --location $LOCATION
-                else
-                    echo "Resource group $RESOURCE_GROUP already exists."
-                fi
-
-                if ! az acr show --name vetri &>/dev/null; then
-                    az acr create --resource-group $RESOURCE_GROUP --name vetri --sku Basic --admin-enabled true
-                else
-                    echo "ACR vetri already exists."
-                fi
-                '''
+                script {
+                    def acr_exists = sh(script: "az acr show --name vetri --query 'name' --output tsv || echo ''", returnStdout: true).trim()
+                    if (acr_exists == "") {
+                        sh """
+                            az group create --name $RESOURCE_GROUP --location $LOCATION
+                            az acr create --resource-group $RESOURCE_GROUP --name vetri --sku Basic --admin-enabled true
+                        """
+                    } else {
+                        echo "ACR already exists, skipping creation."
+                    }
+                }
             }
         }
 
         stage('Push to Azure Container Registry') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'AZURE_CREDENTIALS', usernameVariable: 'AZURE_USER', passwordVariable: 'AZURE_PASS')]) {
-                    sh '''
-                    az acr login --name vetri
-                    docker tag $IMAGE_NAME:$TAG $ACR_NAME/$IMAGE_NAME:$TAG
-                    docker push $ACR_NAME/$IMAGE_NAME:$TAG
-                    '''
+                withCredentials([string(credentialsId: 'AZURE_CREDENTIALS', variable: 'AZURE_CREDENTIALS')]) {
+                    sh """
+                        az acr login --name vetri
+                        docker tag $IMAGE_NAME:$TAG vetri.azurecr.io/$IMAGE_NAME:$TAG
+                        docker push vetri.azurecr.io/$IMAGE_NAME:$TAG
+                    """
                 }
             }
         }
 
         stage('Create AKS Cluster (if not exists)') {
             steps {
-                sh '''
-                if ! az aks show --resource-group $RESOURCE_GROUP --name $AKS_CLUSTER &>/dev/null; then
-                    az aks create --resource-group $RESOURCE_GROUP --name $AKS_CLUSTER --node-count 2 \
-                    --enable-addons monitoring --enable-managed-identity --network-plugin azure \
-                    --generate-ssh-keys
-                else
-                    echo "AKS Cluster $AKS_CLUSTER already exists."
-                fi
-                '''
+                script {
+                    def aks_exists = sh(script: "az aks show --resource-group $RESOURCE_GROUP --name $AKS_CLUSTER --query 'name' --output tsv || echo ''", returnStdout: true).trim()
+                    if (aks_exists == "") {
+                        sh """
+                            az aks create --resource-group $RESOURCE_GROUP --name $AKS_CLUSTER --node-count 2 \
+                            --enable-addons monitoring --enable-managed-identity --network-plugin azure \
+                            --generate-ssh-keys
+                        """
+                    } else {
+                        echo "AKS cluster already exists, skipping creation."
+                    }
+                }
             }
         }
 
@@ -115,20 +100,22 @@ pipeline {
 
         stage('Deploy to AKS') {
             steps {
-                sh '''
-                az aks get-credentials --resource-group $RESOURCE_GROUP --name $AKS_CLUSTER
-                kubectl apply -f deployment.yaml
-                kubectl apply -f service.yaml
-                '''
+                withCredentials([string(credentialsId: 'AZURE_CREDENTIALS', variable: 'AZURE_CREDENTIALS')]) {
+                    sh """
+                        az aks get-credentials --resource-group $RESOURCE_GROUP --name $AKS_CLUSTER
+                        kubectl apply -f deployment.yaml
+                        kubectl apply -f service.yaml
+                    """
+                }
             }
         }
 
         stage('Verify Deployment') {
             steps {
-                sh '''
-                kubectl get pods
-                kubectl get svc fastapi-service
-                '''
+                sh """
+                    kubectl get pods
+                    kubectl get svc fastapi-service
+                """
             }
         }
     }
