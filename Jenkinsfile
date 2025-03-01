@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "your-container-image"
-        RESOURCE_GROUP = "your-resource-group"
-        ACR_NAME = "your-acr-name"
-        AKS_CLUSTER = "your-aks-cluster"
+        IMAGE_NAME = "DOCKER"
+        RESOURCE_GROUP = "myResourceGroup"
+        ACR_NAME = "vetri"
+        AKS_CLUSTER = "devops-aks-cluster"
     }
 
     stages {
