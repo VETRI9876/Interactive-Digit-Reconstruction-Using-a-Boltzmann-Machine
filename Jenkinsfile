@@ -1,5 +1,6 @@
 pipeline {
     agent any
+
     environment {
         ACR_NAME = "vetri.azurecr.io"
         IMAGE_NAME = "fastapi-app"
@@ -8,10 +9,17 @@ pipeline {
         AKS_CLUSTER = "devops-aks-cluster"
         LOCATION = "eastus"
     }
+
     stages {
         stage('Checkout Code') {
             steps {
-                git 'https://github.com/VETRI9876/Interactive-Digit-Reconstruction-Using-a-Boltzmann-Machine.git'
+                script {
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: '*/main']], // Ensure it pulls from the main branch
+                        userRemoteConfigs: [[url: 'https://github.com/VETRI9876/Interactive-Digit-Reconstruction-Using-a-Boltzmann-Machine.git']]
+                    ])
+                }
             }
         }
 
@@ -24,7 +32,7 @@ pipeline {
         stage('Azure Login') {
             steps {
                 withCredentials([string(credentialsId: 'AZURE_CREDENTIALS', variable: 'AZURE_CREDENTIALS')]) {
-                    sh "az login --service-principal -u <client-id> -p <client-secret> --tenant <tenant-id>"
+                    sh "az login --service-principal -u $AZURE_CREDENTIALS_USR -p $AZURE_CREDENTIALS_PSW --tenant $AZURE_CREDENTIALS_TEN"
                 }
             }
         }
@@ -43,7 +51,7 @@ pipeline {
                 withCredentials([string(credentialsId: 'AZURE_CREDENTIALS', variable: 'AZURE_CREDENTIALS')]) {
                     sh """
                         az acr login --name vetri
-                        docker tag $ACR_NAME/$IMAGE_NAME:$TAG vetri.azurecr.io/$IMAGE_NAME:$TAG
+                        docker tag $IMAGE_NAME:$TAG vetri.azurecr.io/$IMAGE_NAME:$TAG
                         docker push vetri.azurecr.io/$IMAGE_NAME:$TAG
                     """
                 }
