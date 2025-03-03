@@ -1,62 +1,40 @@
 pipeline {
     agent any
-    
+
     environment {
-        IMAGE_NAME = 'digit-reconstruction-app'
-        DOCKER_REGISTRY = 'docker.io/vetri20' // Replace with your Docker registry
-        GIT_REPO = 'https://github.com/VETRI9876/Interactive-Digit-Reconstruction-Using-a-Boltzmann-Machine.git'
+        ACR_NAME = 'myACR'
+        IMAGE_NAME = 'myapp'
+        AKS_CLUSTER = 'myAKSCluster'
+        RESOURCE_GROUP = 'myResourceGroup'
+        ACR_LOGIN_SERVER = "${ACR_NAME}.azurecr.io"
     }
-    
+
     stages {
-        stage('Clone Repository') {
-            steps {
-                echo 'Cloning repository...'
-                git url: "${GIT_REPO}", branch: 'main'
-            }
-        }
-        
         stage('Build Docker Image') {
             steps {
-                echo 'Building Docker image...'
                 script {
-                    docker.build("${IMAGE_NAME}")
+                    sh 'docker build -t $IMAGE_NAME:latest .'
                 }
             }
         }
 
-        stage('Run Tests') {
+        stage('Tag & Push to ACR') {
             steps {
-                echo 'Running tests...'
-                sh 'docker run --rm ${IMAGE_NAME} pytest'
-            }
-        }
-
-        stage('Push to Docker Registry') {
-            steps {
-                echo 'Pushing image to Docker registry...'
                 script {
-                    docker.withRegistry("${DOCKER_REGISTRY}", 'docker-credentials-id') {
-                        docker.image("${IMAGE_NAME}").push('latest')
-                    }
+                    sh 'docker tag $IMAGE_NAME:latest $ACR_LOGIN_SERVER/$IMAGE_NAME:latest'
+                    sh 'az acr login --name $ACR_NAME'
+                    sh 'docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:latest'
                 }
             }
         }
 
-        stage('Deploy Application') {
+        stage('Deploy to AKS') {
             steps {
-                echo 'Deploying application...'
-                sh 'kubectl apply -f deployment.yaml'
-                sh 'kubectl apply -f service.yaml'
+                script {
+                    sh 'az aks get-credentials --resource-group $RESOURCE_GROUP --name $AKS_CLUSTER'
+                    sh 'kubectl apply -f deployment.yaml'
+                }
             }
-        }
-    }
-    
-    post {
-        success {
-            echo 'Deployment completed successfully!'
-        }
-        failure {
-            echo 'Deployment failed!'
         }
     }
 }
