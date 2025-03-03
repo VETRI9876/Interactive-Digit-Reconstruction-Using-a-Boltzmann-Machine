@@ -1,26 +1,36 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fastapi-app
+  name: myapp-deployment
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: fastapi-app
+      app: myapp
   template:
     metadata:
       labels:
-        app: fastapi-app
+        app: myapp
     spec:
       containers:
-        - name: fastapi-app
-          image: vetri.azurecr.io/fastapi-app:latest
-          ports:
-            - containerPort: 8000
-          resources:
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
-          imagePullPolicy: Always
+      - name: myapp-container
+        image: myACR.azurecr.io/myapp:latest
+        ports:
+        - containerPort: 8000
+        imagePullPolicy: Always
       imagePullSecrets:
-        - name: acr-secret
+      - name: acr-secret
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-service
+spec:
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  selector:
+    app: myapp
