@@ -1,0 +1,73 @@
+Set Up Azure Container Registry (ACR)
+
+# Log in to Azure
+az login
+
+# Create a resource group
+az group create --name myResourceGroup --location eastus
+
+# Create an ACR instance
+az acr create --resource-group myResourceGroup --name myACR --sku Basic
+
+# Log in to the ACR
+az acr login --name myACR
+
+
+Build and Push Docker Image to ACR
+
+# Set the ACR login server name (Replace <myACR> with your ACR name)
+ACR_LOGIN_SERVER=$(az acr show --name myACR --query loginServer --output tsv)
+
+# Tag the Docker image
+docker build -t myapp:latest .
+docker tag myapp:latest $ACR_LOGIN_SERVER/myapp:latest
+
+# Push the image to ACR
+docker push $ACR_LOGIN_SERVER/myapp:latest
+
+
+Create Azure Kubernetes Service (AKS) Cluster
+
+# Create an AKS cluster
+az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1 --enable-addons monitoring --generate-ssh-keys
+
+# Get AKS credentials
+az aks get-credentials --resource-group myResourceGroup --name myAKSCluster
+
+
+
+Deploy Docker Image to AKS
+Create a Kubernetes deployment file deployment.yaml:
+
+
+# Create Kubernetes secret for ACR access
+kubectl create secret docker-registry acr-secret \
+    --docker-server=$ACR_LOGIN_SERVER \
+    --docker-username=$(az acr credential show -n myACR --query "username" -o tsv) \
+    --docker-password=$(az acr credential show -n myACR --query "passwords[0].value" -o tsv) \
+    --namespace default
+
+# Apply the Kubernetes deployment
+kubectl apply -f deployment.yaml
+
+
+Jenkins CI/CD Pipeline Configuration
+Create a Jenkins pipeline file Jenkinsfile:
+
+
+Jenkins Setup for CI/CD
+
+Install Jenkins Plugins: Kubernetes, Docker, Azure CLI.
+Create a Jenkins Pipeline:
+Configure the repository to use Jenkinsfile.
+Set up credentials for Azure CLI (az login via service principal or managed identity).
+Run the Pipeline to automate build, push, and deployment.
+
+
+Verify Deployment
+
+kubectl get services
+
+Access the application using the external IP provided by the LoadBalancer service.
+
+
