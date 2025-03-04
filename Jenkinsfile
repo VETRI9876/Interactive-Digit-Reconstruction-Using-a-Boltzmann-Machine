@@ -4,10 +4,9 @@ pipeline {
     environment {
         REPO_URL = 'https://github.com/VETRI9876/Interactive-Digit-Reconstruction-Using-a-Boltzmann-Machine.git'
         IMAGE_NAME = 'interactivedigitreconstruction'
-        ACR_NAME = 'youracrname.azurecr.io' // Replace with your ACR name
-        AKS_CLUSTER = 'youraksclustername'  // Replace with your AKS cluster name
-        AKS_RESOURCE_GROUP = 'yourresourcegroup' // Replace with your resource group
-        DOCKER_CREDENTIAL_ID = 'acr-docker-credentials' // Jenkins credentials ID for ACR
+        ACR_NAME = 'vetri.azurecr.io' 
+        AKS_CLUSTER = 'devops-aks-cluster'
+        AKS_RESOURCE_GROUP = 'myResourceGroup'
     }
 
     stages {
@@ -27,12 +26,8 @@ pipeline {
 
         stage('Push to Azure ACR') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "$DOCKER_CREDENTIAL_ID", 
-                                usernameVariable: 'ACR_USERNAME', 
-                                passwordVariable: 'ACR_PASSWORD')]) {
-                    sh 'echo $ACR_PASSWORD | docker login $ACR_NAME --username $ACR_USERNAME --password-stdin'
-                    sh 'docker push $ACR_NAME/$IMAGE_NAME'
-                }
+                sh 'docker login $ACR_NAME'
+                sh 'docker push $ACR_NAME/$IMAGE_NAME'
             }
         }
 
