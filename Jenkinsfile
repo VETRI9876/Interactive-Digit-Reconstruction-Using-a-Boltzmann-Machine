@@ -12,7 +12,14 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git url: "$REPO_URL"
+                git branch: 'main', url: "$REPO_URL"
+            }
+        }
+
+        stage('Verify Git Branch') {
+            steps {
+                sh 'git branch -a'
+                sh 'git status'
             }
         }
 
